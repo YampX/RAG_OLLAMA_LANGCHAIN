@@ -9,23 +9,23 @@ import { Chroma } from "@langchain/community/vectorstores/chroma";
 import { ChatGroq } from "@langchain/groq";
 import { Ollama } from "@langchain/community/llms/ollama";
 
+const groqModel = new ChatGroq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
 const genModel = new Ollama({
-  baseUrl: "http://localhost:11434", // Default value
+  baseUrl: "http://localhost:11434",
   model: "llama3:8b",
 });
 
-const groqModel = new ChatGroq({
-  apiKey: process.env.GROQ_API_KEY,
+const chatModel = new ChatOllama({
+  baseUrl: "http://localhost:11434",
+  model: "llama3:8b",
 });
 
 const embeddings = new OllamaEmbeddings({
   model: "mxbai-embed-large",
   maxConcurrency: 5,
-});
-
-const chatModel = new ChatOllama({
-  baseUrl: "http://localhost:11434", // Default value
-  model: "llama3:8b",
 });
 
 const prompt =
@@ -44,36 +44,29 @@ export async function loadTextFromFile(filePath) {
   return docs;
 }
 
-export async function saveEmbeddings(docs) {
-  const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 800,
-    chunkOverlap: 100,
-  });
-  
-  const splitDocs = await splitter.splitDocuments(docs);
-
-  const vectorStore = await Chroma.fromDocuments(splitDocs, embeddings, {
-    collectionName: "a-test-collection",
-    url: "http://localhost:8000",
-  });
-
-  const documentChain = await createStuffDocumentsChain({
-    llm: groqModel,
-    prompt,
-  });
-  const retriever = vectorStore.asRetriever();
-  const retrievalChain = await createRetrievalChain({
-    combineDocsChain: documentChain,
-    retriever,
-  });
-  return retrievalChain;
+export async function saveEmbeddings(docs, collectionName) {
+  try {
+    const splitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 1000,
+      chunkOverlap: 200,
+      separators: ["\n\n", "\n", " ", ""],
+    });
+    const splitDocs = await splitter.splitDocuments(docs);
+    const vectorStore = await Chroma.fromDocuments(splitDocs, embeddings, {
+      collectionName,
+      url: "http://localhost:8000",
+    });
+    return vectorStore;
+  } catch (error) {
+    console.error('Error al agregar datos a ChromaDB:', error);
+    throw error; // Propago el error para que sea manejado por el código que llama a esta función
+  }
 }
 
 export async function questionsChroma() {
   const vectorStore = new Chroma(embeddings, {
-    collectionName: "a-test-collection",
+    collectionName: "Test_Data1",
   });
-
   const documentChain = await createStuffDocumentsChain({
     llm: groqModel,
     prompt,
@@ -83,27 +76,22 @@ export async function questionsChroma() {
     combineDocsChain: documentChain,
     retriever,
   });
-
   return retrievalChain;
 }
 
-export async function traducer(input, language) {
-  const promptTraducer = ChatPromptTemplate.fromMessages([
-    [
-      "system",
-      `You are an expert translator.`
-    ],
-    ["human", `Response translate "{input}" into {language}.`],
-  ]);
-  const chain = promptTraducer.pipe(groqModel);
+// export async function traducer(input, language) {
+//   const promptTraducer = ChatPromptTemplate.fromMessages([
+//     ["system", `You are an expert translator.`],
+//     ["human", `Response translate "{input}" into {language}.`],
+//   ]);
+//   const chain = promptTraducer.pipe(groqModel);
 
-  const result = await chain.invoke({
-    input,
-    language,
-  });
+//   const result = await chain.invoke({
+//     input,
+//     language,
+//   });
 
-  
-  return result.lc_kwargs.content;
-  // const res = await groqModel.invoke(`Response only ${text} in Spanish`);
-  // console.log(res.lc_kwargs.content);
-}
+//   return result.lc_kwargs.content;
+//   // const res = await groqModel.invoke(`Response only ${text} in Spanish`);
+//   // console.log(res.lc_kwargs.content);
+// }

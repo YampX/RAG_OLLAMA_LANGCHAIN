@@ -1,26 +1,17 @@
-import { loadTextFromFile, saveEmbeddings, questionsChroma, traducer } from "./langchainModule.js";
+import { loadTextFromFile, saveEmbeddings, questionsChroma } from "./langchainModule.js";
 import { deleteCollection, listCollections } from "./chromadbModule.js";
 
-// Cargar el texto desde un archivo
-const filePath = "./data/data.txt";
-const text = await loadTextFromFile(filePath);
-
-/*************************************************************/
-
-// const retrievalChain = await saveEmbeddings(text);
-
-// const result = await retrievalChain.invoke({
-//     input: "Cual era la unica felicidad del personaje?",
-//   });
-
-//   console.log(result.answer);
+// Cargar el texto desde un archivo y guardarlo
+// const filePath = "./data/data1.txt";
+// const text = await loadTextFromFile(filePath);
+// console.log(text);
+// await saveEmbeddings(text, 'Test_Data1');
 
 /*************************************************************/
 
 const retrievalChain = await questionsChroma();
-
 const result = await retrievalChain.invoke({
-  input: "Cual era la unica felicidad del personaje?",
+  input: "Quien es RustiK?",
 });
 
 console.log(result.answer);
@@ -28,4 +19,4 @@ console.log(result.answer);
 /*************************************************************/
 
 // await listCollections();
-// await deleteCollection('a-test-collection')
+// await deleteCollection('Test_Data')
